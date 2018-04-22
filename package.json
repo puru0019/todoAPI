@@ -1,0 +1,22 @@
+{
+  "name": "todoapi",
+  "version": "1.0.0",
+  "description": "todo api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/puru0019/todoAPI.git"
+  },
+  "author": "Gopi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/puru0019/todoAPI/issues"
+  },
+  "homepage": "https://github.com/puru0019/todoAPI#readme",
+  "devDependencies": {
+    "express": "^4.16.3"
+  }
+}
