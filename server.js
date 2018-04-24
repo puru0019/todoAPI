@@ -20,49 +20,51 @@ app.use(middleware.requireAuthentication);
 app.use(bodyParser.json());
 
 app.get('/todos', function(req, res) {
-	var queryParams = req.query;
-	var filterTodos = todos;
+	var query = req.query;
+	var where = {};
 
-	if (queryParams.hasOwnProperty('visible') && queryParams.visible === 'true') {
-		filterTodos = _.where(todos, {
-			visible: true
-		})
-	} else if (queryParams.hasOwnProperty('visible') && queryParams.visible === 'false') {
-		filterTodos = _.where(todos, {
-			visible: false
-		})
+	if (query.hasOwnProperty('visible') && query.visible === 'true') {
+		where.visible = true;
+	} else if (query.hasOwnProperty('visible') && query.visible === 'false') {
+		where.visible = false;
 	}
 
-	if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
-		filterTodos = _.filter(filterTodos, function(todo) {
-			return todo.description.toLowerCase().indexOf(queryParams.q.toLowerCase()) > -1;
-		});
+	if (query.hasOwnProperty('q') && query.q.length > 0) {
+		where.description = {
+			$like: '%' + query.q + '%'
+		};
 	}
 
-	res.json(filterTodos);
+	db.todo.findAll({where:where}).then(function(todos) {
+		res.json(todos);
+	}, function(e) {
+		res.status(500).send();
+	});
 });
 
 app.get('/todos/:id', function(req, res) {
 	var getId = parseInt(req.params.id, 10);
-	var matchedTodo = _.findWhere(todos, {
-		id: getId
-	});
-	if (matchedTodo) {
-		res.json(matchedTodo);
-	} else {
-		res.status(404).send();
-	}
 
+	db.todo.findById(getId).then(function(todo) {
+		if (todo) {
+			res.json(todo.toJSON())
+		} else {
+			res.status(404).send();
+		}
+	}, function(e) {
+		res.status(500).send();
+	});
 });
 
 app.post('/todos', function(req, res) {
 	var body = _.pick(req.body, "description", "visible");
+
 	db.todo.create({
 		description: body.description,
 		visible: body.visible
-	}).then(function(todo){
+	}).then(function(todo) {
 		res.json(todo.toJSON());
-	}).catch(function(e){
+	}, function(e) {
 		res.send(400).json(e);
 	});
 });
@@ -114,9 +116,8 @@ app.put('/todos/:id', function(req, res) {
 
 app.use(express.static(__dirname + '/public'));
 
-db.sequelize.sync().then(function(){
+db.sequelize.sync().then(function() {
 	app.listen(PORT, function() {
 		console.log("listening to port" + PORT);
 	});
 })
-
