@@ -11,6 +11,7 @@ var todoNextId = 1;
 
 var middleware = {
 	requireAuthentication: function(req,res,next){
+
 		next();
 	}
 }
@@ -19,7 +20,23 @@ app.use(middleware.requireAuthentication);
 app.use(bodyParser.json());
 
 app.get('/todos',function(req,res){
-	res.json(todos);
+	var queryParams = req.query;
+	var filterTodos = todos;
+
+	if(queryParams.hasOwnProperty('visible') && queryParams.visible==='true') {
+		filterTodos = _.where(todos,{visible:true})
+	}
+	else if(queryParams.hasOwnProperty('visible') && queryParams.visible==='false') {
+		filterTodos = _.where(todos,{visible:false})
+	}
+
+	if(queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
+		filterTodos = _.filter(filterTodos,function(todo){
+			return todo.description.toLowerCase().indexOf(queryParams.q.toLowerCase()) > -1;
+		});
+	}
+	
+	res.json(filterTodos);
 });
 
 app.get('/todos/:id',function(req,res){
