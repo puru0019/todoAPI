@@ -1,1 +1,3 @@
 node_modules/
+todoDatabase/todo-sqlite-database.sqlite
+data/*.sqlite
