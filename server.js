@@ -18,10 +18,6 @@ var middleware = {
 app.use(middleware.requireAuthentication);
 app.use(bodyParser.json());
 
-app.get('/about',function(req,res){
-	res.send('About Page');
-});
-
 app.get('/todos',function(req,res){
 	res.json(todos);
 });
@@ -58,9 +54,38 @@ app.delete('/todos/:id',function(req,res){
 		res.json(matchedTodo);
 	}
 	else {
-		res.status(404).send();
+		res.status(404).send({"error":"no item found"});
 	}
 
+});
+
+app.put('/todos/:id',function(req,res) {
+	var body = _.pick(req.body,"description","visible");
+	var validAttributes = {};
+
+	var getId = parseInt(req.params.id,10);
+	var matchedTodo = _.findWhere(todos, {id:getId});
+
+	if(!matchedTodo) {
+		return res.status(404).send();
+	}
+
+	if(body.hasOwnProperty('visible') && _.isBoolean(body.visible)) {
+		validAttributes.visible = body.visible;
+	}
+	else if(body.hasOwnProperty('visible')) {
+		return res.status(400).send();
+	}
+
+	if(body.hasOwnProperty('description') && _.isString('description') && body.description.trim().length>=0) {
+		validAttributes.description = body.description;
+	}
+	else if(body.hasOwnProperty('description')) {
+		return res.status(400).send();
+	}
+
+	matchedTodo = _.extend(matchedTodo,validAttributes);
+	res.json(matchedTodo);
 });
 
 app.use(express.static(__dirname+'/public'));
