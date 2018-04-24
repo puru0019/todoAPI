@@ -71,17 +71,32 @@ app.post('/todos', function(req, res) {
 
 app.delete('/todos/:id', function(req, res) {
 	var getId = parseInt(req.params.id, 10);
-	var matchedTodo = _.findWhere(todos, {
-		id: getId
+
+	db.todo.destroy({
+		where: {
+			id: getId
+		}
+	}).then(function(rowsDeleted) {
+		if(rowsDeleted === 0) {
+			res.status(404).json({error:"No rows found"});
+		} else {
+			res.status(204).send();
+		}
+	}, function(e) {
+		res.status(500).send();
 	});
-	if (matchedTodo) {
-		todos = _.without(todos, matchedTodo);
-		res.json(matchedTodo);
-	} else {
-		res.status(404).send({
-			"error": "no item found"
-		});
-	}
+
+	// var matchedTodo = _.findWhere(todos, {
+	// 	id: getId
+	// });
+	// if (matchedTodo) {
+	// 	todos = _.without(todos, matchedTodo);
+	// 	res.json(matchedTodo);
+	// } else {
+	// 	res.status(404).send({
+	// 		"error": "no item found"
+	// 	});
+	// }
 
 });
 
