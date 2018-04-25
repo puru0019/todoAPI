@@ -6,10 +6,6 @@ var db = require('./db.js');
 
 var PORT = process.env.PORT || 3000;
 
-var todos = [];
-var todoNextId = 1;
-
-
 var middleware = {
 	requireAuthentication: function(req, res, next) {
 		next();
@@ -86,47 +82,33 @@ app.delete('/todos/:id', function(req, res) {
 		res.status(500).send();
 	});
 
-	// var matchedTodo = _.findWhere(todos, {
-	// 	id: getId
-	// });
-	// if (matchedTodo) {
-	// 	todos = _.without(todos, matchedTodo);
-	// 	res.json(matchedTodo);
-	// } else {
-	// 	res.status(404).send({
-	// 		"error": "no item found"
-	// 	});
-	// }
-
 });
 
 app.put('/todos/:id', function(req, res) {
 	var body = _.pick(req.body, "description", "visible");
-	var validAttributes = {};
+	var attributes = {};
 
 	var getId = parseInt(req.params.id, 10);
-	var matchedTodo = _.findWhere(todos, {
-		id: getId
+	
+
+	if (body.hasOwnProperty('visible')) {
+		attributes.visible = body.visible;
+	} 
+
+	if (body.hasOwnProperty('description')) {
+		attributes.description = body.description;
+	} 
+
+	db.todo.findById(getId).then(function(todo){
+		return todo.update(attributes);
+	}, function(e) {
+		res.status(500).send();
+	}).then(function(todo) {
+		res.json(todo.toJSON());
+	}, function(e) {
+		res.status(400).json(e);
 	});
-
-	if (!matchedTodo) {
-		return res.status(404).send();
-	}
-
-	if (body.hasOwnProperty('visible') && _.isBoolean(body.visible)) {
-		validAttributes.visible = body.visible;
-	} else if (body.hasOwnProperty('visible')) {
-		return res.status(400).send();
-	}
-
-	if (body.hasOwnProperty('description') && _.isString('description') && body.description.trim().length >= 0) {
-		validAttributes.description = body.description;
-	} else if (body.hasOwnProperty('description')) {
-		return res.status(400).send();
-	}
-
-	matchedTodo = _.extend(matchedTodo, validAttributes);
-	res.json(matchedTodo);
+	
 });
 
 app.use(express.static(__dirname + '/public'));
