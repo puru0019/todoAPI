@@ -31,7 +31,9 @@ app.get('/todos', function(req, res) {
 		};
 	}
 
-	db.todo.findAll({where:where}).then(function(todos) {
+	db.todo.findAll({
+		where: where
+	}).then(function(todos) {
 		res.json(todos);
 	}, function(e) {
 		res.status(500).send();
@@ -73,8 +75,10 @@ app.delete('/todos/:id', function(req, res) {
 			id: getId
 		}
 	}).then(function(rowsDeleted) {
-		if(rowsDeleted === 0) {
-			res.status(404).json({error:"No rows found"});
+		if (rowsDeleted === 0) {
+			res.status(404).json({
+				error: "No rows found"
+			});
 		} else {
 			res.status(204).send();
 		}
@@ -89,26 +93,30 @@ app.put('/todos/:id', function(req, res) {
 	var attributes = {};
 
 	var getId = parseInt(req.params.id, 10);
-	
+
 
 	if (body.hasOwnProperty('visible')) {
 		attributes.visible = body.visible;
-	} 
+	}
 
 	if (body.hasOwnProperty('description')) {
 		attributes.description = body.description;
-	} 
+	}
 
-	db.todo.findById(getId).then(function(todo){
-		return todo.update(attributes);
+	db.todo.findById(getId).then(function(todo) {
+		if (todo) {
+			todo.update(attributes).then(function(todo) {
+				res.json(todo.toJSON());
+			}, function(e) {
+				res.status(400).json(e);
+			});
+		} else {
+			res.status(404).send();
+		}
 	}, function(e) {
 		res.status(500).send();
-	}).then(function(todo) {
-		res.json(todo.toJSON());
-	}, function(e) {
-		res.status(400).json(e);
 	});
-	
+
 });
 
 app.use(express.static(__dirname + '/public'));
