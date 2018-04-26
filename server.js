@@ -9,14 +9,20 @@ var PORT = process.env.PORT || 3000;
 
 var middleware = {
 	requireAuthentication: function(req, res, next) {
-		next();
+		var token = req.get('Auth');
+		console.log("actual user",token);
+		db.user.findByToken(token).then(function(user) {
+			req.user = user;
+			next();
+		}, function(e) {
+			res.status(401).send(e);
+		});
 	}
 }
 
-app.use(middleware.requireAuthentication);
 app.use(bodyParser.json());
 
-app.get('/todos', function(req, res) {
+app.get('/todos', middleware.requireAuthentication, function(req, res) {
 	var query = req.query;
 	var where = {};
 
@@ -41,7 +47,7 @@ app.get('/todos', function(req, res) {
 	});
 });
 
-app.get('/todos/:id', function(req, res) {
+app.get('/todos/:id', middleware.requireAuthentication, function(req, res) {
 	var getId = parseInt(req.params.id, 10);
 
 	db.todo.findById(getId).then(function(todo) {
@@ -55,7 +61,7 @@ app.get('/todos/:id', function(req, res) {
 	});
 });
 
-app.post('/todos', function(req, res) {
+app.post('/todos', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, "description", "visible");
 
 	db.todo.create({
@@ -68,7 +74,7 @@ app.post('/todos', function(req, res) {
 	});
 });
 
-app.delete('/todos/:id', function(req, res) {
+app.delete('/todos/:id', middleware.requireAuthentication, function(req, res) {
 	var getId = parseInt(req.params.id, 10);
 
 	db.todo.destroy({
@@ -89,7 +95,7 @@ app.delete('/todos/:id', function(req, res) {
 
 });
 
-app.put('/todos/:id', function(req, res) {
+app.put('/todos/:id', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, "description", "visible");
 	var attributes = {};
 
@@ -137,12 +143,12 @@ app.post('/users/login', function(req, res) {
 	db.user.authenticate(body).then(function(user) {
 		var userDetails = user.toPublicJSON(user);
 		var token = user.generateToken(user.id, 'authentication');
-		if(token) {
+		if (token) {
 			res.header("Auth", token).json(userDetails);
 		} else {
 			res.status(401).send();
 		}
-		
+
 	}, function(e) {
 		res.status(401).send();
 	})
