@@ -4,18 +4,29 @@ var _ = require("underscore");
 var app = express();
 var db = require('./db.js');
 var bcrypt = require('bcrypt');
+var cryptojs = require('crypto-js');
 
 var PORT = process.env.PORT || 3000;
 
 var middleware = {
 	requireAuthentication: function(req, res, next) {
-		var token = req.get('Auth');
-		console.log("actual user",token);
-		db.user.findByToken(token).then(function(user) {
+		var token = req.get('Auth') || '';
+
+		db.token.findOne({
+			where: {
+				tokenHash: cryptojs.MD5(token).toString()
+			}
+		}).then(function(tokenInstance) {
+			if (!tokenInstance) {
+				throw new Error();
+			}
+			req.token = tokenInstance;
+			return db.user.findByToken(token);
+		}).then(function(user) {
 			req.user = user;
 			next();
-		}, function(e) {
-			res.status(401).send(e);
+		}).catch(function() {
+			res.status(401).send();
 		});
 	}
 }
@@ -25,7 +36,7 @@ app.use(bodyParser.json());
 app.get('/todos', middleware.requireAuthentication, function(req, res) {
 	var query = req.query;
 	var where = {
-		userId : req.user.get("id")
+		userId: req.user.get("id")
 	};
 
 	if (query.hasOwnProperty('visible') && query.visible === 'true') {
@@ -156,24 +167,38 @@ app.post('/users', function(req, res) {
 
 app.post('/users/login', function(req, res) {
 	var body = _.pick(req.body, "email", "password");
+	var userInstance, userDetails;
 
 	db.user.authenticate(body).then(function(user) {
-		var userDetails = user.toPublicJSON(user);
-		var token = user.generateToken(user.id, 'authentication');
-		if (token) {
-			res.header("Auth", token).json(userDetails);
-		} else {
-			res.status(401).send();
-		}
+			userDetails = user.toPublicJSON(user);
+			var token = user.generateToken(user.id, 'authentication');
+			userInstance = user;
 
-	}, function(e) {
+			return db.token.create({
+				token: token
+			});
+
+		}).then(function(tokenInstance) {
+			res.header("Auth", tokenInstance.get('token')).json(userDetails);
+		})
+		.catch(function(e) {
+			res.status(401).send();
+		})
+});
+
+app.delete('/users/login', middleware.requireAuthentication, function(req,res) {
+	req.token.destroy().then(function(){
+		res.status(204).send();
+	}).catch(function() {
 		res.status(401).send();
-	})
+	});
 });
 
 app.use(express.static(__dirname + '/public'));
 
-db.sequelize.sync({force:true}).then(function() {
+db.sequelize.sync({
+	force: true
+}).then(function() {
 	app.listen(PORT, function() {
 		console.log("listening to port" + PORT);
 	});
